@@ -239,16 +239,20 @@ class MixedMotorChain:
             motor.enable()
 
     def disable_all(self) -> None:
-        for motor in self._motor_a_list:
-            try:
-                motor.disable()
-            except Exception:
-                pass
-        for motor in self._motor_b_list:
-            try:
-                motor.disable()
-            except Exception:
-                pass
+        # Send twice for both motor types — a single frame arriving immediately
+        # after an MIT command can be missed on a busy bus.
+        # motor.disable() already includes a 10 ms inter-frame gap.
+        for _ in range(2):
+            for motor in self._motor_a_list:
+                try:
+                    motor.disable()
+                except Exception:
+                    pass
+            for motor in self._motor_b_list:
+                try:
+                    motor.disable()
+                except Exception:
+                    pass
 
     def drain_and_update(self, bus: can.BusABC, timeout: float = 0.001, max_messages: int = 0) -> int:
         """Drain all pending CAN messages from the bus, dispatching to the correct motor parser.

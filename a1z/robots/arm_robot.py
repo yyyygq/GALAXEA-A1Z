@@ -156,30 +156,16 @@ class ArmRobot:
         logger.info(f"Control loop started at {self._control_freq_hz} Hz")
 
     def stop(self) -> None:
-        """Stop the control loop and disable motors with smooth ramp-down."""
+        """Stop the control loop and disable all motors."""
         logger.info("Stopping control loop...")
-        try:
-            if self._running:
-                with self._command_lock:
-                    hold_pos = self._command.pos.copy()
-                t0 = time.time()
-                while time.time() - t0 < 0.3:
-                    alpha = max(0.0, 1.0 - (time.time() - t0) / 0.3)
-                    self.gravity_comp_factor *= alpha
-                    with self._command_lock:
-                        self._command.pos = hold_pos
-                        self._command.vel = np.zeros(self._num_joints)
-                        self._command.kp = np.zeros(self._num_joints)
-                        self._command.kd = self._default_kd.copy() * 1.5
-                        self._command.torque_ff = np.zeros(self._num_joints)
-                    time.sleep(0.01)
-        except Exception:
-            pass
-
         self._stop_event.set()
         if self._thread is not None and self._thread.is_alive():
+            # Normal path: control loop disables motors before returning.
+            # disable_all() below is a safety net in case join times out.
             self._thread.join(timeout=2.0)
         self._running = False
+        # Safety net: disable again from main thread in case the control thread
+        # was killed before its own disable_all() completed (e.g. join timeout).
         self._motor_chain.disable_all()
         logger.info("All motors disabled.")
 
@@ -325,7 +311,16 @@ class ArmRobot:
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
-    def _update(self) -> None:
+        # Send zero-torque first so motors cache a safe state, then disable immediately
+        # from this thread — guarantees disable frames follow the last command in-order
+        # on the CAN bus with no race against the main thread.
+        _zeros = np.zeros(self._num_joints)
+        try:
+            self._motor_chain.send_commands(_zeros, _zeros, _zeros, _zeros, _zeros)
+        except Exception:
+            pass
+        self._motor_chain.disable_all()
+        self._running = False
         """Single control step: read state -> compute gravity -> send commands."""
         # 1) Read current joint state
         self._read_state()
