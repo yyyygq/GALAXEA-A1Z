@@ -89,22 +89,36 @@ def set_motor_b_zero(bus: can.BusABC, motor_id: int, timeout: float = 1.0) -> bo
     """Set MotorB zero point (saves current position as zero offset).
 
     Protocol: Send CAN ID = motor_id, data: [0xFF]*7 + [0xFE]
+    The motor reboots after receiving the command (~1.5s), so we wait
+    and then probe with an enable frame to confirm it came back online.
     """
     data = bytes([0xFF] * 7 + [0xFE])
     msg = can.Message(arbitration_id=motor_id, data=data, is_extended_id=False)
-
     bus.send(msg)
     print(f"  -> Sent zero command: ID=0x{motor_id:02X}, data=FF*7+FE")
+    print(f"  .. Waiting for motor reboot (~1.5s)...")
+    time.sleep(1.5)
+
+    # Probe with enable frame to confirm motor is back online.
+    enable_data = bytes([0xFF] * 7 + [0xFC])
+    while bus.recv(timeout=0.0) is not None:
+        pass
+    bus.send(can.Message(arbitration_id=motor_id, data=enable_data, is_extended_id=False))
 
     deadline = time.time() + timeout
     while time.time() < deadline:
-        resp = bus.recv(timeout=0.1)
-        if resp is not None and resp.arbitration_id == motor_id:
-            print(f"  <- Motor 0x{motor_id:02X} zero set OK (response received)")
-            return True
+        resp = bus.recv(timeout=0.05)
+        if resp is None:
+            continue
+        if resp.arbitration_id != motor_id:
+            continue
+        if bytes(resp.data) == enable_data:
+            continue
+        print(f"  <- Motor 0x{motor_id:02X} zero set OK (back online)")
+        return True
 
-    print(f"  <- Motor 0x{motor_id:02X} zero command sent (no response, may have succeeded)")
-    return True
+    print(f"  <- Motor 0x{motor_id:02X} zero set FAIL (no response after reboot)")
+    return False
 
 
 # ── Main ──────────────────────────────────────────────────
