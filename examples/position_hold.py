@@ -72,12 +72,7 @@ def main():
         control_freq_hz=args.freq,
     )
 
-    def signal_handler(sig, frame):
-        print("\nCtrl+C received, stopping...")
-        robot.stop()
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGINT, signal.default_int_handler)
 
     try:
         robot.start()
@@ -103,7 +98,12 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        if robot.is_running:
+            print("\nReturning to zero...")
+            robot.move_joints(np.zeros(6), speed=args.speed * 0.5)
+            time.sleep(0.3)
         robot.stop()
+        print("\nDone.")
         print("\nDone.")
 
 

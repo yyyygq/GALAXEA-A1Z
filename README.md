@@ -114,7 +114,7 @@ python examples/gravity_comp.py --gravity_factor 1.0
 python examples/gravity_comp.py --mode hold
 
 # 位置保持 + 移动到目标
-python examples/position_hold.py --q_target_deg 0,30,20,-15,0,0 --speed 0.5
+python examples/position_hold.py --q_target_deg 0,30,-20,-15,0,0 --speed 0.5
 ```
 
 ## API 参考
@@ -173,10 +173,6 @@ python tools/motor_diag.py --check-can
 # 扫描所有 6 个电机（检查通信、读取状态、自动诊断）
 python tools/motor_diag.py --scan
 
-# 只扫描 MotorA 或 MotorB
-python tools/motor_diag.py --scan --type motor_a
-python tools/motor_diag.py --scan --type motor_b
-
 # 详细探测某个关节（完整收发流程 + 反馈解析）
 python tools/motor_diag.py --probe 3
 
@@ -202,9 +198,6 @@ python tools/motor_diag.py --clear-error --joints 3 4
 ```bash
 # 标定所有电机（当前位置设为零点）
 sudo python tools/set_zero.py --all
-
-# 仅标定 MotorA
-sudo python tools/set_zero.py --motor-a
 
 # 标定指定关节
 sudo python tools/set_zero.py --joints 0 3
