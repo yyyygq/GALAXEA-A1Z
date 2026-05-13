@@ -14,10 +14,6 @@
   # 扫描所有 6 个电机
   python tools/motor_diag.py --scan
 
-  # 只扫描 MotorA 或 MotorB
-  python tools/motor_diag.py --scan --type motor_a
-  python tools/motor_diag.py --scan --type motor_b
-
   # 持续监控所有电机（Ctrl+C 退出）
   python tools/motor_diag.py --monitor
 
