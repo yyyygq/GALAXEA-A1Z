@@ -356,7 +356,9 @@ class ArmRobot:
         logger.info(f"Loaded {len(traj)} frames from {path}")
         return traj
 
-    # --- Control loop ---    def _control_loop(self) -> None:
+    # --- Control loop ---
+
+    def _control_loop(self) -> None:
         _FREQ_CHECK_INTERVAL = 2.0  # check frequency every 2s
         _MAX_SLOW_PERIODS = 3  # emergency stop after 3 consecutive slow periods (6s)
 
